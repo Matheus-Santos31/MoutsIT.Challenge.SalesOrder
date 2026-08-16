@@ -6,6 +6,14 @@ public class BaseEntity : IComparable<BaseEntity>
 {
     public Guid Id { get; set; }
 
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public DateTime? UpdatedAt { get; set; }
+
+    public DateTime? DeletedAt { get; set; }
+
+    public bool IsDeleted => DeletedAt.HasValue;
+
     public Task<IEnumerable<ValidationErrorDetail>> ValidateAsync()
     {
         return Validator.ValidateAsync(this);
