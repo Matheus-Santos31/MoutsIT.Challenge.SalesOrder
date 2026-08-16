@@ -19,6 +19,9 @@ public class CartConfiguration : BaseEntityMapper<Cart>
         builder.Property(x => x.BranchId)
             .IsRequired();
 
+        builder.Property(x => x.UserId)
+            .IsRequired();
+
         builder.Property(x => x.TotalItems)
             .IsRequired();
 
@@ -28,6 +31,11 @@ public class CartConfiguration : BaseEntityMapper<Cart>
         builder.HasOne(x => x.Branch)
             .WithMany()
             .HasForeignKey(x => x.BranchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.User)
+            .WithMany()
+            .HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasMany(x => x.Items)
