@@ -17,6 +17,10 @@ using Ambev.DeveloperEvaluation.Application.Branches.DeleteBranchAddress;
 using Ambev.DeveloperEvaluation.Application.Branches.GetBranchAddress;
 using Ambev.DeveloperEvaluation.Application.Branches.UpdateBranchAddress;
 using Ambev.DeveloperEvaluation.WebApi.Features.Branches.BranchAddress;
+using Ambev.DeveloperEvaluation.Application.Branches.DeleteBranchEvaluation;
+using Ambev.DeveloperEvaluation.Application.Branches.EvaluateBranch;
+using Ambev.DeveloperEvaluation.WebApi.Features.Branches.EvaluateBranch;
+using Ambev.DeveloperEvaluation.WebApi.Features.Branches.ListBranchEvaluations;
 
 namespace Ambev.DeveloperEvaluation.WebApi.Features.Branches;
 
@@ -202,5 +206,59 @@ public class BranchesController : BaseController
         await _mediator.Send(new DeleteBranchAddressCommand(branchId), cancellationToken);
 
         return Ok(new ApiResponse { Success = true, Message = "Branch address removed successfully" });
+    }
+
+    [Authorize]
+    [HttpPost("{branchId}/evaluations")]
+    [ProducesResponseType(typeof(ApiResponseWithData<EvaluateBranchResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> EvaluateBranch([FromRoute] Guid branchId, [FromBody] EvaluateBranchRequest request, CancellationToken cancellationToken)
+    {
+        var validator = new EvaluateBranchRequestValidator();
+        var validationResult = await validator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors);
+
+        var command = _mapper.Map<EvaluateBranchCommand>(request);
+        command.BranchId = branchId;
+        command.UserId = GetCurrentUserId();
+
+        var response = await _mediator.Send(command, cancellationToken);
+
+        return Ok(new ApiResponseWithData<EvaluateBranchResponse>
+        {
+            Success = true,
+            Message = "Branch evaluated successfully",
+            Data = _mapper.Map<EvaluateBranchResponse>(response)
+        });
+    }
+
+    [Authorize]
+    [HttpGet("{branchId}/evaluations")]
+    [ProducesResponseType(typeof(PaginatedResponse<BranchEvaluationItemResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ListBranchEvaluations([FromRoute] Guid branchId, [FromQuery] ListBranchEvaluationsRequest request, CancellationToken cancellationToken)
+    {
+        var command = new Application.Branches.ListBranchEvaluations.ListBranchEvaluationsCommand
+        {
+            BranchId = branchId,
+            Page = request.Page,
+            PageSize = request.Size
+        };
+
+        var result = await _mediator.Send(command, cancellationToken);
+        var items = _mapper.Map<List<BranchEvaluationItemResponse>>(result.Items);
+
+        return OkPaginated(new PaginatedList<BranchEvaluationItemResponse>(items, result.TotalCount, request.Page, request.Size));
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpDelete("{branchId}/evaluations/{evaluationId}")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteBranchEvaluation([FromRoute] Guid branchId, [FromRoute] Guid evaluationId, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new DeleteBranchEvaluationCommand(branchId, evaluationId), cancellationToken);
+
+        return Ok(new ApiResponse { Success = true, Message = "Evaluation removed successfully" });
     }
 }
