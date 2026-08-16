@@ -12,7 +12,11 @@ using Ambev.DeveloperEvaluation.WebApi.Features.Branches.UpdateBranch;
 using Ambev.DeveloperEvaluation.Application.Branches.ListBranches;
 using Ambev.DeveloperEvaluation.Application.Branches.UpdateBranch;
 using Ambev.DeveloperEvaluation.Application.Branches.DeleteBranch;
-
+using Ambev.DeveloperEvaluation.Application.Branches.CreateBranchAddress;
+using Ambev.DeveloperEvaluation.Application.Branches.DeleteBranchAddress;
+using Ambev.DeveloperEvaluation.Application.Branches.GetBranchAddress;
+using Ambev.DeveloperEvaluation.Application.Branches.UpdateBranchAddress;
+using Ambev.DeveloperEvaluation.WebApi.Features.Branches.BranchAddress;
 
 namespace Ambev.DeveloperEvaluation.WebApi.Features.Branches;
 
@@ -122,5 +126,81 @@ public class BranchesController : BaseController
         await _mediator.Send(new DeleteBranchCommand(id), cancellationToken);
 
         return Ok(new ApiResponse { Success = true, Message = "Branch deleted successfully" });
+    }
+
+    [Authorize(Roles = "Manager,Admin")]
+    [HttpPost("{branchId}/address")]
+    [ProducesResponseType(typeof(ApiResponseWithData<BranchAddressResponse>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CreateBranchAddress([FromRoute] Guid branchId, [FromBody] BranchAddressRequest request, CancellationToken cancellationToken)
+    {
+        var validator = new BranchAddressRequestValidator();
+        var validationResult = await validator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors);
+
+        var command = _mapper.Map<CreateBranchAddressCommand>(request);
+        command.BranchId = branchId;
+
+        var response = await _mediator.Send(command, cancellationToken);
+
+        return Created(string.Empty, new ApiResponseWithData<BranchAddressResponse>
+        {
+            Success = true,
+            Message = "Branch address created successfully",
+            Data = _mapper.Map<BranchAddressResponse>(response)
+        });
+    }
+
+    [Authorize]
+    [HttpGet("{branchId}/address")]
+    [ProducesResponseType(typeof(ApiResponseWithData<BranchAddressResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetBranchAddress([FromRoute] Guid branchId, CancellationToken cancellationToken)
+    {
+        var response = await _mediator.Send(new GetBranchAddressCommand(branchId), cancellationToken);
+
+        return Ok(new ApiResponseWithData<BranchAddressResponse>
+        {
+            Success = true,
+            Message = "Branch address retrieved successfully",
+            Data = _mapper.Map<BranchAddressResponse>(response)
+        });
+    }
+
+    [Authorize(Roles = "Manager,Admin")]
+    [HttpPut("{branchId}/address")]
+    [ProducesResponseType(typeof(ApiResponseWithData<BranchAddressResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateBranchAddress([FromRoute] Guid branchId, [FromBody] BranchAddressRequest request, CancellationToken cancellationToken)
+    {
+        var validator = new BranchAddressRequestValidator();
+        var validationResult = await validator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors);
+
+        var command = _mapper.Map<UpdateBranchAddressCommand>(request);
+        command.BranchId = branchId;
+
+        var response = await _mediator.Send(command, cancellationToken);
+
+        return Ok(new ApiResponseWithData<BranchAddressResponse>
+        {
+            Success = true,
+            Message = "Branch address updated successfully",
+            Data = _mapper.Map<BranchAddressResponse>(response)
+        });
+    }
+
+    [Authorize(Roles = "Manager,Admin")]
+    [HttpDelete("{branchId}/address")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteBranchAddress([FromRoute] Guid branchId, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new DeleteBranchAddressCommand(branchId), cancellationToken);
+
+        return Ok(new ApiResponse { Success = true, Message = "Branch address removed successfully" });
     }
 }

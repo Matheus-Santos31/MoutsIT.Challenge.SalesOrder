@@ -55,21 +55,4 @@ public class UserRepository : BaseRepository<User>, IUserRepository
         return await _context.Users
             .FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
     }
-
-    /// <summary>
-    /// Deletes a user from the database
-    /// </summary>
-    /// <param name="id">The unique identifier of the user to delete</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>True if the user was deleted, false if not found</returns>
-    public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        var user = await GetByIdAsync(id, cancellationToken);
-        if (user == null)
-            return false;
-
-        _context.Users.Remove(user);
-        await _context.SaveChangesAsync(cancellationToken);
-        return true;
-    }
 }
