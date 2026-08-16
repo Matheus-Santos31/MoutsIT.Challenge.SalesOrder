@@ -36,9 +36,16 @@ public class DeleteUserHandler : IRequestHandler<DeleteUserCommand, DeleteUserRe
         if (!validationResult.IsValid)
             throw new ValidationException(validationResult.Errors);
 
-        var success = await _userRepository.DeleteAsync(request.Id, cancellationToken);
-        if (!success)
-            throw new KeyNotFoundException($"User with ID {request.Id} not found");
+        try
+        {
+            await _userRepository.DeleteAsync(request.Id, cancellationToken);
+
+            await _userRepository.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception(ex.Message);
+        }
 
         return new DeleteUserResponse { Success = true };
     }

@@ -50,7 +50,10 @@ public class CreateUserHandler : IRequestHandler<CreateUserCommand, CreateUserRe
         var user = _mapper.Map<User>(command);
         user.Password = _passwordHasher.HashPassword(command.Password);
 
-        var createdUser = await _userRepository.CreateAsync(user, cancellationToken);
+        var createdUser = await _userRepository.AddAsync(user, cancellationToken);
+
+        await _userRepository.SaveChangesAsync(cancellationToken);
+
         var result = _mapper.Map<CreateUserResult>(createdUser);
         return result;
     }

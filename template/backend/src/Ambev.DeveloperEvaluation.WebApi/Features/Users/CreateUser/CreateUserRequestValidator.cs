@@ -23,6 +23,16 @@ public class CreateUserRequestValidator : AbstractValidator<CreateUserRequest>
     /// </remarks>
     public CreateUserRequestValidator()
     {
+        RuleFor(user => user.FirstName)
+            .NotEmpty()
+            .MaximumLength(100)
+            .WithMessage("First name is required and cannot exceed 100 characters.");
+
+        RuleFor(user => user.LastName)
+            .NotEmpty()
+            .MaximumLength(100)
+            .WithMessage("Last name is required and cannot exceed 100 characters.");
+
         RuleFor(user => user.Email).SetValidator(new EmailValidator());
         RuleFor(user => user.Username).NotEmpty().Length(3, 50);
         RuleFor(user => user.Password).SetValidator(new PasswordValidator());

@@ -13,9 +13,14 @@ public class GetUserResult
     public Guid Id { get; set; }
 
     /// <summary>
-    /// The user's full name
+    /// The user's first name
     /// </summary>
-    public string Name { get; set; } = string.Empty;
+    public string FirstName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The user's last name
+    /// </summary>
+    public string LastName { get; set; } = string.Empty;
 
     /// <summary>
     /// The user's email address

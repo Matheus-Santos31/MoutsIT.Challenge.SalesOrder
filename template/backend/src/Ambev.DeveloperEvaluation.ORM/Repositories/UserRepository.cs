@@ -7,7 +7,7 @@ namespace Ambev.DeveloperEvaluation.ORM.Repositories;
 /// <summary>
 /// Implementation of IUserRepository using Entity Framework Core
 /// </summary>
-public class UserRepository : IUserRepository
+public class UserRepository : BaseRepository<User>, IUserRepository
 {
     private readonly DefaultContext _context;
 
@@ -15,7 +15,7 @@ public class UserRepository : IUserRepository
     /// Initializes a new instance of UserRepository
     /// </summary>
     /// <param name="context">The database context</param>
-    public UserRepository(DefaultContext context)
+    public UserRepository(DefaultContext context) : base(context)
     {
         _context = context;
     }
@@ -33,16 +33,16 @@ public class UserRepository : IUserRepository
         return user;
     }
 
-    /// <summary>
-    /// Retrieves a user by their unique identifier
-    /// </summary>
-    /// <param name="id">The unique identifier of the user</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>The user if found, null otherwise</returns>
-    public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        return await _context.Users.FirstOrDefaultAsync(o=> o.Id == id, cancellationToken);
-    }
+    ///// <summary>
+    ///// Retrieves a user by their unique identifier
+    ///// </summary>
+    ///// <param name="id">The unique identifier of the user</param>
+    ///// <param name="cancellationToken">Cancellation token</param>
+    ///// <returns>The user if found, null otherwise</returns>
+    //public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    //{
+    //    return await _context.Users.FirstOrDefaultAsync(o=> o.Id == id, cancellationToken);
+    //}
 
     /// <summary>
     /// Retrieves a user by their email address

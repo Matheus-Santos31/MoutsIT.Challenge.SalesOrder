@@ -13,7 +13,6 @@ public class InfrastructureModuleInitializer : IModuleInitializer
     public void Initialize(WebApplicationBuilder builder)
     {
         builder.Services.AddScoped<DbContext>(provider => provider.GetRequiredService<DefaultContext>());
-        builder.Services.AddScoped(typeof(IBaseRepository<>), typeof(BaseRepository<>));
         builder.Services.AddScoped<IUserRepository, UserRepository>();
     }
 }

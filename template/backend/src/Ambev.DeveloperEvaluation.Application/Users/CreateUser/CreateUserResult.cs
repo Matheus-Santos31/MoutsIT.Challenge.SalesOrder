@@ -14,4 +14,34 @@ public class CreateUserResult
     /// </summary>
     /// <value>A GUID that uniquely identifies the created user in the system.</value>
     public Guid Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the first name of the created user.
+    /// </summary>
+    public string FirstName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the last name of the created user.
+    /// </summary>
+    public string LastName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the email address of the created user.
+    /// </summary>
+    public string Email { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the phone number of the created user.
+    /// </summary>
+    public string Phone { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the role assigned to the created user.
+    /// </summary>
+    public Ambev.DeveloperEvaluation.Domain.Enums.UserRole Role { get; set; }
+
+    /// <summary>
+    /// Gets or sets the status of the created user.
+    /// </summary>
+    public Ambev.DeveloperEvaluation.Domain.Enums.UserStatus Status { get; set; }
 }
