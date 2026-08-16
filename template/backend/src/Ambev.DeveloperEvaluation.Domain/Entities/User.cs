@@ -14,8 +14,17 @@ namespace Ambev.DeveloperEvaluation.Domain.Entities;
 public class User : BaseEntity, IUser
 {
     /// <summary>
-    /// Gets the user's full name.
-    /// Must not be null or empty and should contain both first and last names.
+    /// Gets the user's first name.
+    /// </summary>
+    public string FirstName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets the user's last name.
+    /// </summary>
+    public string LastName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets the user's login name.
     /// </summary>
     public string Username { get; set; } = string.Empty;
 
