@@ -25,5 +25,7 @@ public abstract class BaseEntityMapper<T> : IEntityTypeConfiguration<T> where T 
         builder.Property(x => x.DeletedAt)
             .HasColumnType("timestamp with time zone")
             .IsRequired(false);
+
+        builder.HasQueryFilter(x => x.DeletedAt == null);
     }
 }

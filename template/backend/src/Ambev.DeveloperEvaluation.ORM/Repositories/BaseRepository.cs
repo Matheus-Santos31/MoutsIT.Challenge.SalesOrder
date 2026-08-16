@@ -1,10 +1,12 @@
 using System.Linq.Expressions;
+using System.Reflection;
+using Ambev.DeveloperEvaluation.Domain.Common;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ambev.DeveloperEvaluation.ORM.Repositories;
 
-public abstract class BaseRepository<TEntity> : IBaseRepository<TEntity> where TEntity : class
+public abstract class BaseRepository<TEntity> : IBaseRepository<TEntity> where TEntity : BaseEntity
 {
     protected DefaultContext Context { get; }
     protected DbSet<TEntity> DbSet { get; }
@@ -22,7 +24,7 @@ public abstract class BaseRepository<TEntity> : IBaseRepository<TEntity> where T
 
     public virtual async Task<TEntity?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await DbSet.FindAsync(id, cancellationToken);
+        return await DbSet.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 
     public virtual async Task<IEnumerable<TEntity>> GetAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
@@ -63,6 +65,45 @@ public abstract class BaseRepository<TEntity> : IBaseRepository<TEntity> where T
         return await query.ToListAsync(cancellationToken);
     }
 
+    public virtual async Task<(IEnumerable<TEntity> Items, int TotalCount)> GetPagedAsync(
+        int page,
+        int pageSize,
+        IEnumerable<Expression<Func<TEntity, bool>>>? filters = null,
+        string? orderBy = null,
+        bool ascending = true,
+        CancellationToken cancellationToken = default,
+        params string[] includes)
+    {
+        IQueryable<TEntity> query = DbSet.AsNoTracking();
+
+        if (includes is { Length: > 0 })
+        {
+            foreach (var include in includes)
+            {
+                query = query.Include(include);
+            }
+        }
+
+        if (filters != null)
+        {
+            foreach (var filter in filters)
+            {
+                query = query.Where(filter);
+            }
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(orderBy))
+        {
+            query = ApplyOrderBy(query, orderBy, ascending);
+        }
+
+        var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
+
+        return (items, totalCount);
+    }
+
     public virtual async Task<TEntity> AddAsync(TEntity entity, CancellationToken cancellationToken = default)
     {
         var result = await DbSet.AddAsync(entity, cancellationToken);
@@ -77,13 +118,16 @@ public abstract class BaseRepository<TEntity> : IBaseRepository<TEntity> where T
 
     public virtual Task UpdateAsync(TEntity entity, CancellationToken cancellationToken = default)
     {
+        entity.UpdatedAt = DateTime.UtcNow;
         Context.Entry(entity).State = EntityState.Modified;
         return Task.CompletedTask;
     }
 
     public virtual Task DeleteAsync(TEntity entity, CancellationToken cancellationToken = default)
     {
-        DbSet.Remove(entity);
+        entity.DeletedAt = DateTime.UtcNow;
+        entity.UpdatedAt = DateTime.UtcNow;
+        Context.Entry(entity).State = EntityState.Modified;
         return Task.CompletedTask;
     }
 
@@ -92,13 +136,19 @@ public abstract class BaseRepository<TEntity> : IBaseRepository<TEntity> where T
         var entity = await GetByIdAsync(id, cancellationToken);
         if (entity is not null)
         {
-            DbSet.Remove(entity);
+            await DeleteAsync(entity, cancellationToken);
         }
     }
 
     public virtual Task DeleteRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default)
     {
-        DbSet.RemoveRange(entities);
+        var now = DateTime.UtcNow;
+        foreach (var entity in entities)
+        {
+            entity.DeletedAt = now;
+            entity.UpdatedAt = now;
+            Context.Entry(entity).State = EntityState.Modified;
+        }
         return Task.CompletedTask;
     }
 
@@ -110,7 +160,7 @@ public abstract class BaseRepository<TEntity> : IBaseRepository<TEntity> where T
     private static IQueryable<TEntity> ApplyOrderBy(IQueryable<TEntity> query, string orderBy, bool ascending)
     {
         var parameter = Expression.Parameter(typeof(TEntity), "x");
-        var property = typeof(TEntity).GetProperty(orderBy);
+        var property = typeof(TEntity).GetProperty(orderBy, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
 
         if (property is null)
         {

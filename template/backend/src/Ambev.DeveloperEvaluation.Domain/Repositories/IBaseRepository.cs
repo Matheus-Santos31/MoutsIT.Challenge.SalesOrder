@@ -1,14 +1,23 @@
 using System.Linq.Expressions;
+using Ambev.DeveloperEvaluation.Domain.Common;
 
 namespace Ambev.DeveloperEvaluation.Domain.Repositories;
 
-public interface IBaseRepository<TEntity> where TEntity : class
+public interface IBaseRepository<TEntity> where TEntity : BaseEntity
 {
     Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<TEntity?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IEnumerable<TEntity>> GetAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
     Task<IEnumerable<TEntity>> GetAsync(
         IEnumerable<Expression<Func<TEntity, bool>>> filters,
+        string? orderBy = null,
+        bool ascending = true,
+        CancellationToken cancellationToken = default,
+        params string[] includes);
+    Task<(IEnumerable<TEntity> Items, int TotalCount)> GetPagedAsync(
+        int page,
+        int pageSize,
+        IEnumerable<Expression<Func<TEntity, bool>>>? filters = null,
         string? orderBy = null,
         bool ascending = true,
         CancellationToken cancellationToken = default,
