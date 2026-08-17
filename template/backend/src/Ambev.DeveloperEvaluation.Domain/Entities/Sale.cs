@@ -52,4 +52,19 @@ public class Sale : BaseEntity
     public User? User { get; set; }
     public Branch? Branch { get; set; }
     public ICollection<SaleItem> Items { get; set; } = new List<SaleItem>();
+
+    /// <summary>
+    /// Recomputes the sale's rollups from its currently Active items only. Called after
+    /// any item is cancelled so the totals always reflect what the customer is actually
+    /// still being charged for, not what the sale originally added up to.
+    /// </summary>
+    public void RecalculateTotals()
+    {
+        var activeItems = Items.Where(x => x.Status == SaleItemStatus.Active).ToList();
+
+        ProductsQuantity = activeItems.Count;
+        ItemsQuantity = activeItems.Sum(x => x.Quantity);
+        TotalDiscount = activeItems.Sum(x => x.Discount);
+        TotalAmount = activeItems.Sum(x => x.TotalAmount);
+    }
 }

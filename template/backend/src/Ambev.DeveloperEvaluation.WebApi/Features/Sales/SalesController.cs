@@ -7,6 +7,8 @@ using Ambev.DeveloperEvaluation.WebApi.Features.Sales.CreateSale;
 using Ambev.DeveloperEvaluation.WebApi.Features.Sales.GetSale;
 using Ambev.DeveloperEvaluation.Application.Sales.CreateSale;
 using Ambev.DeveloperEvaluation.Application.Sales.GetSale;
+using Ambev.DeveloperEvaluation.Application.Sales.CancelSale;
+using Ambev.DeveloperEvaluation.Application.Sales.CancelSaleItem;
 
 namespace Ambev.DeveloperEvaluation.WebApi.Features.Sales;
 
@@ -75,6 +77,52 @@ public class SalesController : BaseController
             Success = true,
             Message = "Sale retrieved successfully",
             Data = _mapper.Map<GetSaleResponse>(response)
+        });
+    }
+
+    /// <summary>
+    /// Cancels the whole sale (owner, Manager or Admin). Cascades to every Active item.
+    /// </summary>
+    [Authorize]
+    [HttpDelete("{id}")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> CancelSale([FromRoute] Guid id, CancellationToken cancellationToken)
+    {
+        var command = new CancelSaleCommand
+        {
+            Id = id,
+            RequestingUserId = GetCurrentUserId(),
+            IsRequestingUserAdmin = User.IsInRole("Admin"),
+            IsRequestingUserManager = User.IsInRole("Manager")
+        };
+
+        await _mediator.Send(command, cancellationToken);
+
+        return Ok(new ApiResponse { Success = true, Message = "Sale cancelled successfully" });
+    }
+
+    /// <summary>
+    /// Cancels a single line item — an operational action restricted to Manager/Admin,
+    /// never the customer directly. Auto-cancels the whole sale if no items remain active.
+    /// </summary>
+    [Authorize(Roles = "Manager,Admin")]
+    [HttpDelete("{saleId}/items/{itemId}")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> CancelSaleItem([FromRoute] Guid saleId, [FromRoute] Guid itemId, CancellationToken cancellationToken)
+    {
+        var response = await _mediator.Send(new CancelSaleItemCommand(saleId, itemId), cancellationToken);
+
+        return Ok(new ApiResponse
+        {
+            Success = true,
+            Message = response.SaleWasCancelled
+                ? "Item cancelled successfully; the sale had no remaining active items and was cancelled too"
+                : "Item cancelled successfully"
         });
     }
 }
