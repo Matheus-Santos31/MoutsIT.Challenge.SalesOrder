@@ -1,3 +1,4 @@
+using Ambev.DeveloperEvaluation.Domain.Common;
 using Ambev.DeveloperEvaluation.Domain.Entities;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
 using FluentValidation;
@@ -50,7 +51,7 @@ public class GetCartHandler : IRequestHandler<GetCartCommand, GetCartResult>
     private static CartItemDetail BuildItemDetail(CartItem item)
     {
         var unitPrice = item.Product?.Price ?? 0;
-        var (discount, totalAmount) = CartItem.CalculatePricing(unitPrice, item.Quantity);
+        var (discount, totalAmount) = QuantityDiscountPolicy.Calculate(unitPrice, item.Quantity);
 
         return new CartItemDetail
         {

@@ -12,7 +12,7 @@ using Ambev.DeveloperEvaluation.WebApi.Features.Carts.CartItem;
 using Ambev.DeveloperEvaluation.Application.Carts.CreateCart;
 using Ambev.DeveloperEvaluation.Application.Carts.GetCart;
 using Ambev.DeveloperEvaluation.Application.Carts.ListCarts;
-using Ambev.DeveloperEvaluation.Application.Carts.DeleteCart;
+using Ambev.DeveloperEvaluation.Application.Carts.CancelCart;
 using Ambev.DeveloperEvaluation.Application.Carts.AddCartItem;
 using Ambev.DeveloperEvaluation.Application.Carts.UpdateCartItem;
 using Ambev.DeveloperEvaluation.Application.Carts.DeleteCartItem;
@@ -101,14 +101,19 @@ public class CartsController : BaseController
         return OkPaginated(new PaginatedList<CartListItemResponse>(items, result.TotalCount, request.Page, request.Size));
     }
 
+    /// <summary>
+    /// Cancels a cart still open for shopping. Completing a cart is not done here —
+    /// see POST /sales, which promotes the cart to Completed and creates the Sale.
+    /// </summary>
     [Authorize]
     [HttpDelete("{id}")]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeleteCart([FromRoute] Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> CancelCart([FromRoute] Guid id, CancellationToken cancellationToken)
     {
-        var command = new DeleteCartCommand
+        var command = new CancelCartCommand
         {
             Id = id,
             RequestingUserId = GetCurrentUserId(),
@@ -117,7 +122,7 @@ public class CartsController : BaseController
 
         await _mediator.Send(command, cancellationToken);
 
-        return Ok(new ApiResponse { Success = true, Message = "Cart deleted successfully" });
+        return Ok(new ApiResponse { Success = true, Message = "Cart cancelled successfully" });
     }
 
     [Authorize]

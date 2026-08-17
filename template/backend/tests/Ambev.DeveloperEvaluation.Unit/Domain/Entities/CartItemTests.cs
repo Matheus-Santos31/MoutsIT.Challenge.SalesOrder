@@ -22,28 +22,6 @@ public class CartItemTests
         Assert.Equal(10m * quantity, item.TotalAmount);
     }
 
-    [Fact(DisplayName = "CalculatePricing has no side effects and matches ApplyPricing's result")]
-    public void Given_UnitPriceAndQuantity_When_CalculatingPricing_Then_MatchesApplyPricing()
-    {
-        var item = new CartItem();
-        item.ApplyPricing(unitPrice: 15m, quantity: 6);
-
-        var (discount, totalAmount) = CartItem.CalculatePricing(unitPrice: 15m, quantity: 6);
-
-        Assert.Equal(item.Discount, discount);
-        Assert.Equal(item.TotalAmount, totalAmount);
-    }
-
-    [Fact(DisplayName = "CalculatePricing reflects the catalog price passed in, not a frozen one")]
-    public void Given_ChangedCatalogPrice_When_CalculatingPricing_Then_ReflectsTheNewPrice()
-    {
-        var (_, totalAmountAtOldPrice) = CartItem.CalculatePricing(unitPrice: 15m, quantity: 2);
-        var (_, totalAmountAtNewPrice) = CartItem.CalculatePricing(unitPrice: 30m, quantity: 2);
-
-        Assert.Equal(30m, totalAmountAtOldPrice);
-        Assert.Equal(60m, totalAmountAtNewPrice);
-    }
-
     [Theory(DisplayName = "Quantities from 4 to 9 get a 10% discount")]
     [InlineData(4)]
     [InlineData(9)]
