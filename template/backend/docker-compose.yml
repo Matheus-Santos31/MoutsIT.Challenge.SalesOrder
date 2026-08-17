@@ -12,11 +12,14 @@ services:
         condition: service_healthy
       ambev.developerevaluation.rabbitmq:
         condition: service_healthy
+      ambev.developerevaluation.cache:
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_HTTP_PORTS: "8080"
       ASPNETCORE_HTTPS_PORTS: "8081"
       ConnectionStrings__DefaultConnection: "Host=ambev.developerevaluation.database;Port=5432;Database=developer_evaluation;Username=developer;Password=ev@luAt10n;Trust Server Certificate=true"
+      ConnectionStrings__Redis: "ambev.developerevaluation.cache:6379,password=ev@luAt10n"
       RabbitMQ__HostName: "ambev.developerevaluation.rabbitmq"
       RabbitMQ__Port: "5672"
       RabbitMQ__UserName: "guest"
