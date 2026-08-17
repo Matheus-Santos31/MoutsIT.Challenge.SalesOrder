@@ -26,6 +26,7 @@ public class DefaultContext : DbContext
     public DbSet<Sale> Sales { get; set; }
     public DbSet<SaleItem> SaleItems { get; set; }
     public DbSet<OutboxEvent> OutboxEvents { get; set; }
+    public DbSet<BranchManager> BranchManagers { get; set; }
 
     public DefaultContext(DbContextOptions<DefaultContext> options) : base(options)
     {

@@ -35,5 +35,6 @@ public class InfrastructureModuleInitializer : IModuleInitializer
         builder.Services.AddScoped<ISaleRepository, SaleRepository>();
         builder.Services.AddScoped<ISaleItemRepository, SaleItemRepository>();
         builder.Services.AddScoped<IOutboxEventRepository, OutboxEventRepository>();
+        builder.Services.AddScoped<IBranchManagerRepository, BranchManagerRepository>();
     }
 }
