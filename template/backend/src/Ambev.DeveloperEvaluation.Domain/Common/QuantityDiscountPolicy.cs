@@ -3,10 +3,8 @@ using Ambev.DeveloperEvaluation.Domain.Exceptions;
 namespace Ambev.DeveloperEvaluation.Domain.Common;
 
 /// <summary>
-/// The README's quantity-based discount tiers: no discount below 4 items, 10% for 4-9,
-/// 20% for 10-20, and a hard limit at 20 identical items. Shared by <see cref="Entities.CartItem"/>
-/// (live, non-reserved pricing) and <see cref="Entities.SaleItem"/> (frozen at sale time) so the
-/// tier math only lives in one place.
+/// Discount method. Shared by <see cref="Entities.CartItem"/>
+/// <see cref="Entities.SaleItem"/> (frozen at sale time) so the tier math only lives in one place.
 /// </summary>
 public static class QuantityDiscountPolicy
 {

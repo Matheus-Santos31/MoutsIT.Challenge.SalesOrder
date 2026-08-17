@@ -1,6 +1,7 @@
 using Ambev.DeveloperEvaluation.Application.Sales.CancelSale;
 using Ambev.DeveloperEvaluation.Domain.Entities;
 using Ambev.DeveloperEvaluation.Domain.Enums;
+using Ambev.DeveloperEvaluation.Domain.Events;
 using Ambev.DeveloperEvaluation.Domain.Exceptions;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
 using FluentAssertions;
@@ -62,6 +63,7 @@ public class CancelSaleHandlerTests
         sale.ProductsQuantity.Should().Be(0);
         sale.ItemsQuantity.Should().Be(0);
         await _saleItemRepository.Received(2).UpdateAsync(Arg.Any<SaleItem>(), Arg.Any<CancellationToken>());
+        sale.DomainEvents.Should().ContainSingle(e => e is SaleCancelledEvent);
     }
 
     [Fact(DisplayName = "Given an Admin who does not own the sale When cancelling Then succeeds")]

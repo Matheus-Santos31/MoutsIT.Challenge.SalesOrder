@@ -1,6 +1,7 @@
 using Ambev.DeveloperEvaluation.Application.Sales.CreateSale;
 using Ambev.DeveloperEvaluation.Domain.Entities;
 using Ambev.DeveloperEvaluation.Domain.Enums;
+using Ambev.DeveloperEvaluation.Domain.Events;
 using Ambev.DeveloperEvaluation.Domain.Exceptions;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
 using FluentAssertions;
@@ -82,6 +83,24 @@ public class CreateSaleHandlerTests
         result.BranchDocNumber.Should().Be("123456");
         scenario.Cart.Status.Should().Be(CartStatus.Completed);
         await _saleRepository.Received(1).AddAsync(Arg.Any<Sale>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact(DisplayName = "Given a valid active cart When creating a sale Then raises a SaleCreatedEvent with a real Id")]
+    public async Task Handle_ValidActiveCart_RaisesSaleCreatedEvent()
+    {
+        var scenario = BuildValidScenario();
+        var command = new CreateSaleCommand { CartId = scenario.Cart.Id, RequestingUserId = scenario.Cart.UserId };
+
+        Sale? capturedSale = null;
+        await _saleRepository.AddAsync(Arg.Do<Sale>(s => capturedSale = s), Arg.Any<CancellationToken>());
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        capturedSale.Should().NotBeNull();
+        capturedSale!.Id.Should().NotBe(Guid.Empty, "the Id must be generated client-side so the event can carry it before the DB round-trip");
+        var domainEvent = capturedSale.DomainEvents.Should().ContainSingle().Subject;
+        domainEvent.Should().BeOfType<SaleCreatedEvent>()
+            .Which.SaleId.Should().Be(capturedSale.Id);
     }
 
     [Fact(DisplayName = "Given a cart that is not active When creating a sale Then throws DomainException")]

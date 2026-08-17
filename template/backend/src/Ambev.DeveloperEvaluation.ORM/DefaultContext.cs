@@ -1,8 +1,11 @@
-﻿using Ambev.DeveloperEvaluation.Domain.Entities;
+﻿using Ambev.DeveloperEvaluation.Domain.Common;
+using Ambev.DeveloperEvaluation.Domain.Entities;
+using Ambev.DeveloperEvaluation.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 using System.Reflection;
+using System.Text.Json;
 
 namespace Ambev.DeveloperEvaluation.ORM;
 
@@ -22,6 +25,7 @@ public class DefaultContext : DbContext
     public DbSet<UserAddress> UserAddresses { get; set; }
     public DbSet<Sale> Sales { get; set; }
     public DbSet<SaleItem> SaleItems { get; set; }
+    public DbSet<OutboxEvent> OutboxEvents { get; set; }
 
     public DefaultContext(DbContextOptions<DefaultContext> options) : base(options)
     {
@@ -33,6 +37,46 @@ public class DefaultContext : DbContext
 
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
         base.OnModelCreating(modelBuilder);
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        CaptureDomainEventsToOutbox();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        CaptureDomainEventsToOutbox();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    /// <summary>
+    /// Turns every domain event raised by a tracked <see cref="AggregateRoot"/> into an OutboxEvent row.
+    /// </summary>
+    private void CaptureDomainEventsToOutbox()
+    {
+        var aggregatesWithEvents = ChangeTracker.Entries<AggregateRoot>()
+            .Select(entry => entry.Entity)
+            .Where(entity => entity.DomainEvents.Count > 0)
+            .ToList();
+
+        foreach (var aggregate in aggregatesWithEvents)
+        {
+            foreach (var domainEvent in aggregate.DomainEvents)
+            {
+                OutboxEvents.Add(new OutboxEvent
+                {
+                    EntityType = aggregate.GetType().Name,
+                    AggregateId = aggregate.Id,
+                    EventType = domainEvent.GetType().Name,
+                    Payload = JsonSerializer.Serialize(domainEvent, domainEvent.GetType()),
+                    Status = OutboxEventStatus.Pending
+                });
+            }
+
+            aggregate.ClearDomainEvents();
+        }
     }
 }
 public class YourDbContextFactory : IDesignTimeDbContextFactory<DefaultContext>

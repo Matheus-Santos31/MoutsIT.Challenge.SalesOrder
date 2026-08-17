@@ -1,6 +1,7 @@
 using Ambev.DeveloperEvaluation.Application.Sales.CancelSaleItem;
 using Ambev.DeveloperEvaluation.Domain.Entities;
 using Ambev.DeveloperEvaluation.Domain.Enums;
+using Ambev.DeveloperEvaluation.Domain.Events;
 using Ambev.DeveloperEvaluation.Domain.Exceptions;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
 using FluentAssertions;
@@ -64,6 +65,7 @@ public class CancelSaleItemHandlerTests
         sale.ItemsQuantity.Should().Be(2);
         sale.ProductsQuantity.Should().Be(1);
         await _saleItemRepository.Received(1).UpdateAsync(item2, Arg.Any<CancellationToken>());
+        sale.DomainEvents.Should().ContainSingle(e => e is SaleItemCancelledEvent);
     }
 
     [Fact(DisplayName = "Given a sale with a single active item When cancelling it Then auto-cancels the whole sale")]
@@ -82,6 +84,8 @@ public class CancelSaleItemHandlerTests
         sale.Status.Should().Be(SaleStatus.Cancelled);
         sale.TotalAmount.Should().Be(0m);
         await _saleRepository.Received(1).UpdateAsync(sale, Arg.Any<CancellationToken>());
+        sale.DomainEvents.Should().Contain(e => e is SaleItemCancelledEvent);
+        sale.DomainEvents.Should().Contain(e => e is SaleCancelledEvent);
     }
 
     [Fact(DisplayName = "Given an already cancelled item When cancelling again Then throws DomainException")]

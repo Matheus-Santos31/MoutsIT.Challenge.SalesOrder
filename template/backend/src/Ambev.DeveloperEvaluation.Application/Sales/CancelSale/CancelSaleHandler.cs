@@ -1,4 +1,5 @@
 using Ambev.DeveloperEvaluation.Domain.Enums;
+using Ambev.DeveloperEvaluation.Domain.Events;
 using Ambev.DeveloperEvaluation.Domain.Exceptions;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
 using FluentValidation;
@@ -7,10 +8,7 @@ using MediatR;
 namespace Ambev.DeveloperEvaluation.Application.Sales.CancelSale;
 
 /// <summary>
-/// Cancels an entire sale: owner, Manager or Admin. Cascades to every still-Active
-/// SaleItem (a cancelled sale can't have active line items) and zeroes the sale's
-/// rollups via Sale.RecalculateTotals — the per-item history (Discount/TotalAmount)
-/// is preserved on each SaleItem regardless.
+/// Cancels an entire sale: owner, Manager or Admin.
 /// </summary>
 public class CancelSaleHandler : IRequestHandler<CancelSaleCommand, CancelSaleResponse>
 {
@@ -49,6 +47,7 @@ public class CancelSaleHandler : IRequestHandler<CancelSaleCommand, CancelSaleRe
 
         sale.Status = SaleStatus.Cancelled;
         sale.RecalculateTotals();
+        sale.AddDomainEvent(new SaleCancelledEvent(sale.Id, sale.OrderId));
 
         await _saleRepository.UpdateAsync(sale, cancellationToken);
         await _saleRepository.SaveChangesAsync(cancellationToken);

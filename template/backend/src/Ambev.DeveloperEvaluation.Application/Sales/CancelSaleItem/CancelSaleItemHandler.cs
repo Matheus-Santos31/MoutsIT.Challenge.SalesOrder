@@ -1,4 +1,5 @@
 using Ambev.DeveloperEvaluation.Domain.Enums;
+using Ambev.DeveloperEvaluation.Domain.Events;
 using Ambev.DeveloperEvaluation.Domain.Exceptions;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
 using FluentValidation;
@@ -7,10 +8,7 @@ using MediatR;
 namespace Ambev.DeveloperEvaluation.Application.Sales.CancelSaleItem;
 
 /// <summary>
-/// Cancels a single line item of a sale — an operational/fulfillment action restricted to
-/// Manager/Admin (enforced at the controller via role authorization, not ownership: a
-/// customer never cancels their own line items directly). Recomputes the sale's rollups
-/// from the remaining Active items, and auto-cancels the whole sale if none are left.
+/// Cancels a single line item of a sale — an operational/fulfillment action restricted to Manager/Admin.
 /// </summary>
 public class CancelSaleItemHandler : IRequestHandler<CancelSaleItemCommand, CancelSaleItemResponse>
 {
@@ -46,12 +44,16 @@ public class CancelSaleItemHandler : IRequestHandler<CancelSaleItemCommand, Canc
 
         item.Status = SaleItemStatus.Cancelled;
         await _saleItemRepository.UpdateAsync(item, cancellationToken);
+        sale.AddDomainEvent(new SaleItemCancelledEvent(sale.Id, item.Id, item.ProductId, item.Quantity));
 
         sale.RecalculateTotals();
 
         var saleWasCancelled = sale.Items.All(x => x.Status == SaleItemStatus.Cancelled);
         if (saleWasCancelled)
+        {
             sale.Status = SaleStatus.Cancelled;
+            sale.AddDomainEvent(new SaleCancelledEvent(sale.Id, sale.OrderId));
+        }
 
         await _saleRepository.UpdateAsync(sale, cancellationToken);
         await _saleRepository.SaveChangesAsync(cancellationToken);

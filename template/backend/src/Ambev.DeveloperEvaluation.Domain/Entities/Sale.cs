@@ -3,30 +3,23 @@ using Ambev.DeveloperEvaluation.Domain.Enums;
 
 namespace Ambev.DeveloperEvaluation.Domain.Entities;
 
-public class Sale : BaseEntity
+public class Sale : AggregateRoot
 {
     /// <summary>
-    /// The cart this sale was created from. One cart yields at most one sale.
+    /// The cart this sale was created from.
     /// </summary>
     public Guid CartId { get; set; }
 
     /// <summary>
-    /// Human-facing sequential sale number (DB-generated identity), distinct from <see cref="BaseEntity.Id"/>.
+    /// Sale code more human-facing
     /// </summary>
     public long OrderId { get; set; }
 
     public Guid UserId { get; set; }
     public Guid BranchId { get; set; }
-
-    /// <summary>
-    /// Snapshot of the customer's descriptive data at the time of the sale (External
-    /// Identities pattern with denormalization) so a later name/email change never
-    /// alters what an already-completed sale says about who bought it.
-    /// </summary>
     public string CustomerName { get; set; } = string.Empty;
     public string CustomerEmail { get; set; } = string.Empty;
 
-    /// <summary>Snapshot of the branch's descriptive data at the time of the sale.</summary>
     public string BranchName { get; set; } = string.Empty;
     public string BranchDocNumber { get; set; } = string.Empty;
     public string BranchCompanyName { get; set; } = string.Empty;
@@ -54,9 +47,7 @@ public class Sale : BaseEntity
     public ICollection<SaleItem> Items { get; set; } = new List<SaleItem>();
 
     /// <summary>
-    /// Recomputes the sale's rollups from its currently Active items only. Called after
-    /// any item is cancelled so the totals always reflect what the customer is actually
-    /// still being charged for, not what the sale originally added up to.
+    /// Recompute tha sale's rolloups from currently actives items only.
     /// </summary>
     public void RecalculateTotals()
     {

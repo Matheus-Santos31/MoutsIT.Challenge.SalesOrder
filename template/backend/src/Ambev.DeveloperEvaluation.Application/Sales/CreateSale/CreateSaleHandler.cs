@@ -1,5 +1,6 @@
 using Ambev.DeveloperEvaluation.Domain.Entities;
 using Ambev.DeveloperEvaluation.Domain.Enums;
+using Ambev.DeveloperEvaluation.Domain.Events;
 using Ambev.DeveloperEvaluation.Domain.Exceptions;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
 using FluentValidation;
@@ -8,10 +9,7 @@ using MediatR;
 namespace Ambev.DeveloperEvaluation.Application.Sales.CreateSale;
 
 /// <summary>
-/// Completes an active cart into a sale: snapshots the customer/branch descriptive data
-/// and addresses, freezes pricing for every item at the current catalog price, and
-/// promotes the cart to Completed. This is the only path that turns a Cart into a Sale —
-/// cancelling a cart (DELETE /carts/{id}) never reaches this handler.
+/// Completes an active cart into a sale and promotes the cart to Completed.
 /// </summary>
 public class CreateSaleHandler : IRequestHandler<CreateSaleCommand, CreateSaleResult>
 {
@@ -78,6 +76,7 @@ public class CreateSaleHandler : IRequestHandler<CreateSaleCommand, CreateSaleRe
 
         var sale = new Sale
         {
+            Id = Guid.NewGuid(),
             CartId = cart.Id,
             UserId = cart.UserId,
             BranchId = cart.BranchId,
@@ -107,6 +106,7 @@ public class CreateSaleHandler : IRequestHandler<CreateSaleCommand, CreateSaleRe
         sale.TotalAmount = sale.Items.Sum(x => x.TotalAmount);
 
         cart.Status = CartStatus.Completed;
+        sale.AddDomainEvent(new SaleCreatedEvent(sale.Id, sale.UserId, sale.BranchId, sale.TotalAmount));
 
         await _saleRepository.AddAsync(sale, cancellationToken);
         await _cartRepository.UpdateAsync(cart, cancellationToken);
