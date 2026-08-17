@@ -11,15 +11,18 @@ public class CreateBranchAddressHandler : IRequestHandler<CreateBranchAddressCom
     private readonly IBranchRepository _branchRepository;
     private readonly IAddressRepository _addressRepository;
     private readonly IBranchAddressRepository _branchAddressRepository;
+    private readonly IBranchManagerRepository _branchManagerRepository;
 
     public CreateBranchAddressHandler(
         IBranchRepository branchRepository,
         IAddressRepository addressRepository,
-        IBranchAddressRepository branchAddressRepository)
+        IBranchAddressRepository branchAddressRepository,
+        IBranchManagerRepository branchManagerRepository)
     {
         _branchRepository = branchRepository;
         _addressRepository = addressRepository;
         _branchAddressRepository = branchAddressRepository;
+        _branchManagerRepository = branchManagerRepository;
     }
 
     public async Task<BranchAddressResult> Handle(CreateBranchAddressCommand command, CancellationToken cancellationToken)
@@ -32,6 +35,10 @@ public class CreateBranchAddressHandler : IRequestHandler<CreateBranchAddressCom
         var branch = await _branchRepository.GetByIdAsync(command.BranchId, cancellationToken);
         if (branch is null)
             throw new KeyNotFoundException($"Branch with ID {command.BranchId} not found");
+
+        if (!command.IsRequestingUserAdmin
+            && !await _branchManagerRepository.IsManagerOfBranchAsync(command.RequestingUserId, branch.Id, cancellationToken))
+            throw new UnauthorizedAccessException("You can only manage branches you're assigned to.");
 
         var existing = await _branchAddressRepository.GetByBranchIdAsync(command.BranchId, cancellationToken);
         if (existing != null)

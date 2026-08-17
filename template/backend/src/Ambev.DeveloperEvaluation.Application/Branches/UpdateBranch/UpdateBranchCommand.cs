@@ -8,4 +8,6 @@ public class UpdateBranchCommand : IRequest<UpdateBranchResult>
     public string Name { get; set; } = string.Empty;
     public string DocNumber { get; set; } = string.Empty;
     public string CompanyName { get; set; } = string.Empty;
+    public Guid RequestingUserId { get; set; }
+    public bool IsRequestingUserAdmin { get; set; }
 }

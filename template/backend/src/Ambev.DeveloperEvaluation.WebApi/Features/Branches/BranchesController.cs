@@ -21,6 +21,9 @@ using Ambev.DeveloperEvaluation.Application.Branches.DeleteBranchEvaluation;
 using Ambev.DeveloperEvaluation.Application.Branches.EvaluateBranch;
 using Ambev.DeveloperEvaluation.WebApi.Features.Branches.EvaluateBranch;
 using Ambev.DeveloperEvaluation.WebApi.Features.Branches.ListBranchEvaluations;
+using Ambev.DeveloperEvaluation.WebApi.Features.Branches.AssignBranchManager;
+using Ambev.DeveloperEvaluation.Application.Branches.AssignBranchManager;
+using Ambev.DeveloperEvaluation.Application.Branches.UnassignBranchManager;
 
 namespace Ambev.DeveloperEvaluation.WebApi.Features.Branches;
 
@@ -110,6 +113,8 @@ public class BranchesController : BaseController
 
         var command = _mapper.Map<UpdateBranchCommand>(request);
         command.Id = id;
+        command.RequestingUserId = GetCurrentUserId();
+        command.IsRequestingUserAdmin = User.IsInRole("Admin");
 
         var response = await _mediator.Send(command, cancellationToken);
 
@@ -124,10 +129,17 @@ public class BranchesController : BaseController
     [Authorize(Roles = "Manager,Admin")]
     [HttpDelete("{id}")]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteBranch([FromRoute] Guid id, CancellationToken cancellationToken)
     {
-        await _mediator.Send(new DeleteBranchCommand(id), cancellationToken);
+        var command = new DeleteBranchCommand(id)
+        {
+            RequestingUserId = GetCurrentUserId(),
+            IsRequestingUserAdmin = User.IsInRole("Admin")
+        };
+
+        await _mediator.Send(command, cancellationToken);
 
         return Ok(new ApiResponse { Success = true, Message = "Branch deleted successfully" });
     }
@@ -145,6 +157,8 @@ public class BranchesController : BaseController
 
         var command = _mapper.Map<CreateBranchAddressCommand>(request);
         command.BranchId = branchId;
+        command.RequestingUserId = GetCurrentUserId();
+        command.IsRequestingUserAdmin = User.IsInRole("Admin");
 
         var response = await _mediator.Send(command, cancellationToken);
 
@@ -186,6 +200,8 @@ public class BranchesController : BaseController
 
         var command = _mapper.Map<UpdateBranchAddressCommand>(request);
         command.BranchId = branchId;
+        command.RequestingUserId = GetCurrentUserId();
+        command.IsRequestingUserAdmin = User.IsInRole("Admin");
 
         var response = await _mediator.Send(command, cancellationToken);
 
@@ -200,10 +216,17 @@ public class BranchesController : BaseController
     [Authorize(Roles = "Manager,Admin")]
     [HttpDelete("{branchId}/address")]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteBranchAddress([FromRoute] Guid branchId, CancellationToken cancellationToken)
     {
-        await _mediator.Send(new DeleteBranchAddressCommand(branchId), cancellationToken);
+        var command = new DeleteBranchAddressCommand(branchId)
+        {
+            RequestingUserId = GetCurrentUserId(),
+            IsRequestingUserAdmin = User.IsInRole("Admin")
+        };
+
+        await _mediator.Send(command, cancellationToken);
 
         return Ok(new ApiResponse { Success = true, Message = "Branch address removed successfully" });
     }
@@ -260,5 +283,41 @@ public class BranchesController : BaseController
         await _mediator.Send(new DeleteBranchEvaluationCommand(branchId, evaluationId), cancellationToken);
 
         return Ok(new ApiResponse { Success = true, Message = "Evaluation removed successfully" });
+    }
+
+    /// <summary>
+    /// Assigns a Manager to this branch (Admin only). Upserts — reassigns if the user was
+    /// already managing a different branch.
+    /// </summary>
+    [Authorize(Roles = "Admin")]
+    [HttpPost("{branchId}/managers")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AssignBranchManager([FromRoute] Guid branchId, [FromBody] AssignBranchManagerRequest request, CancellationToken cancellationToken)
+    {
+        var validator = new AssignBranchManagerRequestValidator();
+        var validationResult = await validator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors);
+
+        var command = new AssignBranchManagerCommand { BranchId = branchId, UserId = request.UserId };
+        await _mediator.Send(command, cancellationToken);
+
+        return Ok(new ApiResponse { Success = true, Message = "Manager assigned to branch successfully" });
+    }
+
+    /// <summary>
+    /// Unassigns a Manager from this branch (Admin only).
+    /// </summary>
+    [Authorize(Roles = "Admin")]
+    [HttpDelete("{branchId}/managers/{userId}")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UnassignBranchManager([FromRoute] Guid branchId, [FromRoute] Guid userId, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new UnassignBranchManagerCommand(branchId, userId), cancellationToken);
+
+        return Ok(new ApiResponse { Success = true, Message = "Manager unassigned from branch successfully" });
     }
 }

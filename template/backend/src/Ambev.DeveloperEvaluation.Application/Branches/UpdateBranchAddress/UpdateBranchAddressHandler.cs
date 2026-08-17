@@ -9,11 +9,16 @@ public class UpdateBranchAddressHandler : IRequestHandler<UpdateBranchAddressCom
 {
     private readonly IBranchAddressRepository _branchAddressRepository;
     private readonly IAddressRepository _addressRepository;
+    private readonly IBranchManagerRepository _branchManagerRepository;
 
-    public UpdateBranchAddressHandler(IBranchAddressRepository branchAddressRepository, IAddressRepository addressRepository)
+    public UpdateBranchAddressHandler(
+        IBranchAddressRepository branchAddressRepository,
+        IAddressRepository addressRepository,
+        IBranchManagerRepository branchManagerRepository)
     {
         _branchAddressRepository = branchAddressRepository;
         _addressRepository = addressRepository;
+        _branchManagerRepository = branchManagerRepository;
     }
 
     public async Task<BranchAddressResult> Handle(UpdateBranchAddressCommand command, CancellationToken cancellationToken)
@@ -22,6 +27,10 @@ public class UpdateBranchAddressHandler : IRequestHandler<UpdateBranchAddressCom
         var validationResult = await validator.ValidateAsync(command, cancellationToken);
         if (!validationResult.IsValid)
             throw new ValidationException(validationResult.Errors);
+
+        if (!command.IsRequestingUserAdmin
+            && !await _branchManagerRepository.IsManagerOfBranchAsync(command.RequestingUserId, command.BranchId, cancellationToken))
+            throw new UnauthorizedAccessException("You can only manage branches you're assigned to.");
 
         var branchAddress = await _branchAddressRepository.GetByBranchIdAsync(command.BranchId, cancellationToken);
         if (branchAddress is null)

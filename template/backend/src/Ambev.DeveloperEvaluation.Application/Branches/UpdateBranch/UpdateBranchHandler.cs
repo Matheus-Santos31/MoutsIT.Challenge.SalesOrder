@@ -9,11 +9,13 @@ namespace Ambev.DeveloperEvaluation.Application.Branches.UpdateBranch;
 public class UpdateBranchHandler : IRequestHandler<UpdateBranchCommand, UpdateBranchResult>
 {
     private readonly IBranchRepository _branchRepository;
+    private readonly IBranchManagerRepository _branchManagerRepository;
     private readonly IMapper _mapper;
 
-    public UpdateBranchHandler(IBranchRepository branchRepository, IMapper mapper)
+    public UpdateBranchHandler(IBranchRepository branchRepository, IBranchManagerRepository branchManagerRepository, IMapper mapper)
     {
         _branchRepository = branchRepository;
+        _branchManagerRepository = branchManagerRepository;
         _mapper = mapper;
     }
 
@@ -27,6 +29,10 @@ public class UpdateBranchHandler : IRequestHandler<UpdateBranchCommand, UpdateBr
         var branch = await _branchRepository.GetByIdAsync(command.Id, cancellationToken);
         if (branch is null)
             throw new KeyNotFoundException($"Branch with ID {command.Id} not found");
+
+        if (!command.IsRequestingUserAdmin
+            && !await _branchManagerRepository.IsManagerOfBranchAsync(command.RequestingUserId, branch.Id, cancellationToken))
+            throw new UnauthorizedAccessException("You can only manage branches you're assigned to.");
 
         var existingBranch = await _branchRepository.GetByDocNumberAsync(command.DocNumber, command.Id, cancellationToken);
         if (existingBranch != null)

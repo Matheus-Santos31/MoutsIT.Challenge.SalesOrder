@@ -12,4 +12,6 @@ public class UpdateBranchAddressCommand : IRequest<BranchAddressResult>
     public string PostalCode { get; set; } = string.Empty;
     public string Latitude { get; set; } = string.Empty;
     public string Longitude { get; set; } = string.Empty;
+    public Guid RequestingUserId { get; set; }
+    public bool IsRequestingUserAdmin { get; set; }
 }
