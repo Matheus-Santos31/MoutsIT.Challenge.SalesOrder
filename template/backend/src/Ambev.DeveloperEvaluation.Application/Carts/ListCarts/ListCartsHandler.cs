@@ -9,10 +9,12 @@ namespace Ambev.DeveloperEvaluation.Application.Carts.ListCarts;
 public class ListCartsHandler : IRequestHandler<ListCartsCommand, ListCartsResult>
 {
     private readonly ICartRepository _cartRepository;
+    private readonly IBranchManagerRepository _branchManagerRepository;
 
-    public ListCartsHandler(ICartRepository cartRepository)
+    public ListCartsHandler(ICartRepository cartRepository, IBranchManagerRepository branchManagerRepository)
     {
         _cartRepository = cartRepository;
+        _branchManagerRepository = branchManagerRepository;
     }
 
     public async Task<ListCartsResult> Handle(ListCartsCommand command, CancellationToken cancellationToken)
@@ -24,11 +26,26 @@ public class ListCartsHandler : IRequestHandler<ListCartsCommand, ListCartsResul
 
         var filters = new List<Expression<Func<Cart, bool>>>();
 
-        if (!command.IsRequestingUserAdmin)
+        if (command.IsRequestingUserAdmin)
+        {
+            if (command.BranchId.HasValue)
+                filters.Add(x => x.BranchId == command.BranchId.Value);
+        }
+        else if (command.IsRequestingUserManager)
+        {
+            var assignment = await _branchManagerRepository.GetByUserIdAsync(command.RequestingUserId, cancellationToken);
+            if (assignment is null)
+                filters.Add(x => x.UserId == command.RequestingUserId);
+            else
+                filters.Add(x => x.BranchId == assignment.BranchId);
+        }
+        else
+        {
             filters.Add(x => x.UserId == command.RequestingUserId);
 
-        if (command.BranchId.HasValue)
-            filters.Add(x => x.BranchId == command.BranchId.Value);
+            if (command.BranchId.HasValue)
+                filters.Add(x => x.BranchId == command.BranchId.Value);
+        }
 
         if (command.Status.HasValue)
             filters.Add(x => x.Status == command.Status.Value);

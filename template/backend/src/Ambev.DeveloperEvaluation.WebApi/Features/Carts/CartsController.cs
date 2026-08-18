@@ -92,7 +92,8 @@ public class CartsController : BaseController
             BranchId = request.BranchId,
             Status = request.Status,
             RequestingUserId = GetCurrentUserId(),
-            IsRequestingUserAdmin = User.IsInRole("Admin")
+            IsRequestingUserAdmin = User.IsInRole("Admin"),
+            IsRequestingUserManager = User.IsInRole("Manager")
         };
 
         var result = await _mediator.Send(command, cancellationToken);

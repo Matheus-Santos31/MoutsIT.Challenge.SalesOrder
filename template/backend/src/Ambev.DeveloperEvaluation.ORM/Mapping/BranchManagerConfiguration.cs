@@ -15,7 +15,9 @@ public class BranchManagerConfiguration : BaseEntityMapper<BranchManager>
         builder.Property(x => x.BranchId).IsRequired();
         builder.Property(x => x.UserId).IsRequired();
 
-        builder.HasIndex(x => x.UserId).IsUnique();
+        builder.HasIndex(x => x.UserId)
+            .IsUnique()
+            .HasFilter("\"DeletedAt\" IS NULL");
 
         builder.HasOne(x => x.Branch)
             .WithMany()
