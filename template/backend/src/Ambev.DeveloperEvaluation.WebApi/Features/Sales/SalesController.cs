@@ -5,8 +5,10 @@ using AutoMapper;
 using Ambev.DeveloperEvaluation.WebApi.Common;
 using Ambev.DeveloperEvaluation.WebApi.Features.Sales.CreateSale;
 using Ambev.DeveloperEvaluation.WebApi.Features.Sales.GetSale;
+using Ambev.DeveloperEvaluation.WebApi.Features.Sales.GetSaleHistory;
 using Ambev.DeveloperEvaluation.Application.Sales.CreateSale;
 using Ambev.DeveloperEvaluation.Application.Sales.GetSale;
+using Ambev.DeveloperEvaluation.Application.Sales.GetSaleHistory;
 using Ambev.DeveloperEvaluation.Application.Sales.CancelSale;
 using Ambev.DeveloperEvaluation.Application.Sales.CancelSaleItem;
 
@@ -77,6 +79,35 @@ public class SalesController : BaseController
             Success = true,
             Message = "Sale retrieved successfully",
             Data = _mapper.Map<GetSaleResponse>(response)
+        });
+    }
+
+    /// <summary>
+    /// Reads a customer's sale history from the read model (MongoDB) — no join against
+    /// Postgres. Eventually consistent: populated by the OutboxProcessor after each
+    /// Sale-related event is dispatched, so a just-created sale may take a few seconds to
+    /// show up here.
+    /// </summary>
+    [Authorize]
+    [HttpGet("history/{userId}")]
+    [ProducesResponseType(typeof(ApiResponseWithData<IEnumerable<GetSaleHistoryResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetSaleHistory([FromRoute] Guid userId, CancellationToken cancellationToken)
+    {
+        var command = new GetSaleHistoryCommand
+        {
+            UserId = userId,
+            RequestingUserId = GetCurrentUserId(),
+            IsRequestingUserAdmin = User.IsInRole("Admin")
+        };
+
+        var response = await _mediator.Send(command, cancellationToken);
+
+        return Ok(new ApiResponseWithData<IEnumerable<GetSaleHistoryResponse>>
+        {
+            Success = true,
+            Message = "Sale history retrieved successfully",
+            Data = _mapper.Map<IEnumerable<GetSaleHistoryResponse>>(response)
         });
     }
 
