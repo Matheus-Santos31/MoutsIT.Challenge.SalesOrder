@@ -62,6 +62,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ambev.DeveloperEvaluation.O
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Workers", "Workers", "{892CF044-9273-4172-B87A-972105073436}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ambev.DeveloperEvaluation.ReadModel", "src\Ambev.DeveloperEvaluation.ReadModel\Ambev.DeveloperEvaluation.ReadModel.csproj", "{EE57C8BE-D378-4923-B985-345BCAE38A66}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -116,6 +118,10 @@ Global
 		{4109E5A2-3F9C-4A05-AC2B-894F5D480F66}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4109E5A2-3F9C-4A05-AC2B-894F5D480F66}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4109E5A2-3F9C-4A05-AC2B-894F5D480F66}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EE57C8BE-D378-4923-B985-345BCAE38A66}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE57C8BE-D378-4923-B985-345BCAE38A66}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EE57C8BE-D378-4923-B985-345BCAE38A66}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EE57C8BE-D378-4923-B985-345BCAE38A66}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -142,6 +148,7 @@ Global
 		{97514600-2F1C-49A6-9299-70FF151A4F4C} = {BD3812F8-8783-42C6-B231-8A032EF9481F}
 		{4109E5A2-3F9C-4A05-AC2B-894F5D480F66} = {892CF044-9273-4172-B87A-972105073436}
 		{892CF044-9273-4172-B87A-972105073436} = {FC704106-833B-484D-B71C-E45123A9EC30}
+		{EE57C8BE-D378-4923-B985-345BCAE38A66} = {BD3812F8-8783-42C6-B231-8A032EF9481F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {13EAB81A-C6B2-4C22-B4DE-C6603FC445B6}

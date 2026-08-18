@@ -3,6 +3,7 @@ using Ambev.DeveloperEvaluation.MessageBus;
 using Ambev.DeveloperEvaluation.ORM;
 using Ambev.DeveloperEvaluation.ORM.Repositories;
 using Ambev.DeveloperEvaluation.OutboxProcessor;
+using Ambev.DeveloperEvaluation.ReadModel;
 using Microsoft.EntityFrameworkCore;
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -15,7 +16,9 @@ builder.Services.AddDbContext<DefaultContext>(options =>
 );
 
 builder.Services.AddScoped<IOutboxEventRepository, OutboxEventRepository>();
+builder.Services.AddScoped<ISaleRepository, SaleRepository>();
 builder.Services.AddMessageBus(builder.Configuration);
+builder.Services.AddReadModel(builder.Configuration);
 builder.Services.Configure<OutboxProcessorOptions>(builder.Configuration.GetSection(OutboxProcessorOptions.SectionName));
 
 builder.Services.AddHostedService<OutboxDispatcherService>();

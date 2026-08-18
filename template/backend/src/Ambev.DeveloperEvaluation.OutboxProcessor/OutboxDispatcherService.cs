@@ -1,4 +1,5 @@
 using Ambev.DeveloperEvaluation.Common.Messaging;
+using Ambev.DeveloperEvaluation.Common.ReadModels;
 using Ambev.DeveloperEvaluation.Domain.Entities;
 using Ambev.DeveloperEvaluation.Domain.Enums;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
@@ -51,6 +52,8 @@ public class OutboxDispatcherService : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var outboxRepository = scope.ServiceProvider.GetRequiredService<IOutboxEventRepository>();
         var publisher = scope.ServiceProvider.GetRequiredService<IMessagePublisher>();
+        var saleRepository = scope.ServiceProvider.GetRequiredService<ISaleRepository>();
+        var readModelStore = scope.ServiceProvider.GetRequiredService<ISalesReadModelStore>();
 
         var dueEvents = (await outboxRepository.GetDueBatchAsync(_options.BatchSize, DateTime.UtcNow, cancellationToken)).ToList();
         if (dueEvents.Count == 0)
@@ -61,11 +64,70 @@ public class OutboxDispatcherService : BackgroundService
         foreach (var outboxEvent in dueEvents)
         {
             await DispatchAsync(outboxEvent, publisher, cancellationToken);
+
+            if (outboxEvent.Status == OutboxEventStatus.Sent && outboxEvent.EntityType == nameof(Sale))
+                await ProjectSalesReadModelAsync(outboxEvent, saleRepository, readModelStore, cancellationToken);
+
             await outboxRepository.UpdateAsync(outboxEvent, cancellationToken);
         }
 
         await outboxRepository.SaveChangesAsync(cancellationToken);
     }
+
+    /// <summary>
+    /// Re-projects the full Sale into the read model store after a Sale-related event was
+    /// successfully dispatched. This is a downstream, eventually-consistent copy — Postgres
+    /// stays the system of record, so a failure here never touches the outbox event's own
+    /// status/retry bookkeeping, it's only logged.
+    /// </summary>
+    private async Task ProjectSalesReadModelAsync(
+        OutboxEvent outboxEvent,
+        ISaleRepository saleRepository,
+        ISalesReadModelStore readModelStore,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var sale = await saleRepository.GetByIdWithItemsAsync(outboxEvent.AggregateId, cancellationToken);
+            if (sale is null)
+                return;
+
+            await readModelStore.UpsertAsync(ToReadModel(sale), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to project sales read model for outbox event {Id} (sale {SaleId})",
+                outboxEvent.Id, outboxEvent.AggregateId);
+        }
+    }
+
+    private static SaleHistoryDocument ToReadModel(Sale sale) => new()
+    {
+        SaleId = sale.Id,
+        OrderId = sale.OrderId,
+        UserId = sale.UserId,
+        CustomerName = sale.CustomerName,
+        CustomerEmail = sale.CustomerEmail,
+        BranchId = sale.BranchId,
+        BranchName = sale.BranchName,
+        TotalAmount = sale.TotalAmount,
+        ProductsQuantity = sale.ProductsQuantity,
+        ItemsQuantity = sale.ItemsQuantity,
+        TotalDiscount = sale.TotalDiscount,
+        Status = sale.Status.ToString(),
+        Items = sale.Items.Select(x => new SaleHistoryItemDocument
+        {
+            ProductId = x.ProductId,
+            ProductTitle = x.ProductTitle,
+            Quantity = x.Quantity,
+            UnitPrice = x.UnitPrice,
+            Discount = x.Discount,
+            TotalAmount = x.TotalAmount,
+            Status = x.Status.ToString()
+        }).ToList(),
+        CreatedAt = sale.CreatedAt,
+        ProjectedAt = DateTime.UtcNow
+    };
 
     private async Task DispatchAsync(OutboxEvent outboxEvent, IMessagePublisher publisher, CancellationToken cancellationToken)
     {

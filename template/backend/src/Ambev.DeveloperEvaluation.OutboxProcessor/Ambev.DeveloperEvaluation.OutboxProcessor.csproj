@@ -17,5 +17,6 @@
     <ProjectReference Include="..\Ambev.DeveloperEvaluation.Domain\Ambev.DeveloperEvaluation.Domain.csproj" />
     <ProjectReference Include="..\Ambev.DeveloperEvaluation.ORM\Ambev.DeveloperEvaluation.ORM.csproj" />
     <ProjectReference Include="..\Ambev.DeveloperEvaluation.MessageBus\Ambev.DeveloperEvaluation.MessageBus.csproj" />
+    <ProjectReference Include="..\Ambev.DeveloperEvaluation.ReadModel\Ambev.DeveloperEvaluation.ReadModel.csproj" />
   </ItemGroup>
 </Project>

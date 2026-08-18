@@ -1,6 +1,7 @@
 ﻿using Ambev.DeveloperEvaluation.Domain.Repositories;
 using Ambev.DeveloperEvaluation.ORM;
 using Ambev.DeveloperEvaluation.ORM.Repositories;
+using Ambev.DeveloperEvaluation.ReadModel;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -36,5 +37,7 @@ public class InfrastructureModuleInitializer : IModuleInitializer
         builder.Services.AddScoped<ISaleItemRepository, SaleItemRepository>();
         builder.Services.AddScoped<IOutboxEventRepository, OutboxEventRepository>();
         builder.Services.AddScoped<IBranchManagerRepository, BranchManagerRepository>();
+
+        builder.Services.AddReadModel(builder.Configuration);
     }
 }
