@@ -26,7 +26,8 @@ public class ProductEvaluationConfiguration : BaseEntityMapper<ProductEvaluation
             .HasMaxLength(1000);
 
         builder.HasIndex(x => new { x.ProductId, x.UserId })
-            .IsUnique();
+            .IsUnique()
+            .HasFilter(SoftDeleteIndex.NotDeletedFilter);
 
         builder.HasOne(x => x.Product)
             .WithMany(x => x.Evaluations)

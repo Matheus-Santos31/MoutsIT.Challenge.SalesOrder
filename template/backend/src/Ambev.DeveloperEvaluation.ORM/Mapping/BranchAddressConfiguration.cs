@@ -19,7 +19,8 @@ public class BranchAddressConfiguration : BaseEntityMapper<BranchAddress>
             .IsRequired();
 
         builder.HasIndex(x => new { x.BranchId, x.AddressId })
-            .IsUnique();
+            .IsUnique()
+            .HasFilter(SoftDeleteIndex.NotDeletedFilter);
 
         builder.HasOne(x => x.Branch)
             .WithMany()

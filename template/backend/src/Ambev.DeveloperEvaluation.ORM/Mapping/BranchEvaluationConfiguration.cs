@@ -26,7 +26,8 @@ public class BranchEvaluationConfiguration : BaseEntityMapper<BranchEvaluation>
             .HasMaxLength(1000);
 
         builder.HasIndex(x => new { x.BranchId, x.UserId })
-            .IsUnique();
+            .IsUnique()
+            .HasFilter(SoftDeleteIndex.NotDeletedFilter);
 
         builder.HasOne(x => x.Branch)
             .WithMany(x => x.Evaluations)

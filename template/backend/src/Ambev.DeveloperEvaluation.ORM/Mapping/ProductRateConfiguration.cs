@@ -23,7 +23,8 @@ public class ProductRateConfiguration : BaseEntityMapper<ProductRate>
             .IsRequired();
 
         builder.HasIndex(x => x.ProductId)
-            .IsUnique();
+            .IsUnique()
+            .HasFilter(SoftDeleteIndex.NotDeletedFilter);
 
         builder.HasOne(x => x.Product)
             .WithOne()

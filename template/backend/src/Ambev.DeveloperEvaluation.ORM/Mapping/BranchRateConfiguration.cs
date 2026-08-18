@@ -23,7 +23,8 @@ public class BranchRateConfiguration : BaseEntityMapper<BranchRate>
             .IsRequired();
 
         builder.HasIndex(x => x.BranchId)
-            .IsUnique();
+            .IsUnique()
+            .HasFilter(SoftDeleteIndex.NotDeletedFilter);
 
         builder.HasOne(x => x.Branch)
             .WithOne()

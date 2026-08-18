@@ -4,6 +4,16 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Ambev.DeveloperEvaluation.ORM.Mapping;
 
+/// <summary>
+/// SQL filter for unique indexes on soft-deletable entities, so a deleted row doesn't keep
+/// occupying the uniqueness slot forever — a new row with the same value can be added once
+/// the old one is soft-deleted.
+/// </summary>
+public static class SoftDeleteIndex
+{
+    public const string NotDeletedFilter = "\"DeletedAt\" IS NULL";
+}
+
 public abstract class BaseEntityMapper<T> : IEntityTypeConfiguration<T> where T : BaseEntity
 {
     public virtual void Configure(EntityTypeBuilder<T> builder)

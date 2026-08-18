@@ -25,7 +25,8 @@ public class UserAddressConfiguration : BaseEntityMapper<UserAddress>
             .IsRequired();
 
         builder.HasIndex(x => new { x.UserId, x.AddressId })
-            .IsUnique();
+            .IsUnique()
+            .HasFilter(SoftDeleteIndex.NotDeletedFilter);
 
         builder.HasOne(x => x.Address)
             .WithMany()

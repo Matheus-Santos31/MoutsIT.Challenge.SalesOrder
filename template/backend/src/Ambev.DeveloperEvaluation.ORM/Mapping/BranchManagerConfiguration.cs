@@ -17,7 +17,7 @@ public class BranchManagerConfiguration : BaseEntityMapper<BranchManager>
 
         builder.HasIndex(x => x.UserId)
             .IsUnique()
-            .HasFilter("\"DeletedAt\" IS NULL");
+            .HasFilter(SoftDeleteIndex.NotDeletedFilter);
 
         builder.HasOne(x => x.Branch)
             .WithMany()
