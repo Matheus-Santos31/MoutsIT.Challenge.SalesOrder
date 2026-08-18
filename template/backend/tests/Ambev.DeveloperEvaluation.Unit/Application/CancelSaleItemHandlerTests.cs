@@ -20,13 +20,15 @@ public class CancelSaleItemHandlerTests
 {
     private readonly ISaleRepository _saleRepository;
     private readonly ISaleItemRepository _saleItemRepository;
+    private readonly IBranchManagerRepository _branchManagerRepository;
     private readonly CancelSaleItemHandler _handler;
 
     public CancelSaleItemHandlerTests()
     {
         _saleRepository = Substitute.For<ISaleRepository>();
         _saleItemRepository = Substitute.For<ISaleItemRepository>();
-        _handler = new CancelSaleItemHandler(_saleRepository, _saleItemRepository);
+        _branchManagerRepository = Substitute.For<IBranchManagerRepository>();
+        _handler = new CancelSaleItemHandler(_saleRepository, _saleItemRepository, _branchManagerRepository);
     }
 
     private static (Sale Sale, SaleItem FirstItem, SaleItem SecondItem) BuildSaleWithTwoActiveItems()
@@ -37,6 +39,7 @@ public class CancelSaleItemHandlerTests
         var sale = new Sale
         {
             Id = Guid.NewGuid(),
+            BranchId = Guid.NewGuid(),
             Status = SaleStatus.Created,
             Items = [item1, item2],
             ProductsQuantity = 2,
@@ -54,7 +57,7 @@ public class CancelSaleItemHandlerTests
         var (sale, item1, item2) = BuildSaleWithTwoActiveItems();
         _saleRepository.GetByIdWithItemsAsync(sale.Id, Arg.Any<CancellationToken>()).Returns(sale);
 
-        var result = await _handler.Handle(new CancelSaleItemCommand(sale.Id, item2.Id), CancellationToken.None);
+        var result = await _handler.Handle(new CancelSaleItemCommand(sale.Id, item2.Id) { IsRequestingUserAdmin = true }, CancellationToken.None);
 
         result.Success.Should().BeTrue();
         result.SaleWasCancelled.Should().BeFalse();
@@ -78,7 +81,7 @@ public class CancelSaleItemHandlerTests
         sale.TotalAmount = 5m;
         _saleRepository.GetByIdWithItemsAsync(sale.Id, Arg.Any<CancellationToken>()).Returns(sale);
 
-        var result = await _handler.Handle(new CancelSaleItemCommand(sale.Id, item2.Id), CancellationToken.None);
+        var result = await _handler.Handle(new CancelSaleItemCommand(sale.Id, item2.Id) { IsRequestingUserAdmin = true }, CancellationToken.None);
 
         result.SaleWasCancelled.Should().BeTrue();
         sale.Status.Should().Be(SaleStatus.Cancelled);
@@ -95,7 +98,7 @@ public class CancelSaleItemHandlerTests
         item1.Status = SaleItemStatus.Cancelled;
         _saleRepository.GetByIdWithItemsAsync(sale.Id, Arg.Any<CancellationToken>()).Returns(sale);
 
-        var act = () => _handler.Handle(new CancelSaleItemCommand(sale.Id, item1.Id), CancellationToken.None);
+        var act = () => _handler.Handle(new CancelSaleItemCommand(sale.Id, item1.Id) { IsRequestingUserAdmin = true }, CancellationToken.None);
 
         await act.Should().ThrowAsync<DomainException>();
     }
@@ -107,7 +110,7 @@ public class CancelSaleItemHandlerTests
         sale.Status = SaleStatus.Cancelled;
         _saleRepository.GetByIdWithItemsAsync(sale.Id, Arg.Any<CancellationToken>()).Returns(sale);
 
-        var act = () => _handler.Handle(new CancelSaleItemCommand(sale.Id, item1.Id), CancellationToken.None);
+        var act = () => _handler.Handle(new CancelSaleItemCommand(sale.Id, item1.Id) { IsRequestingUserAdmin = true }, CancellationToken.None);
 
         await act.Should().ThrowAsync<DomainException>();
     }
@@ -118,7 +121,7 @@ public class CancelSaleItemHandlerTests
         var (sale, _, _) = BuildSaleWithTwoActiveItems();
         _saleRepository.GetByIdWithItemsAsync(sale.Id, Arg.Any<CancellationToken>()).Returns(sale);
 
-        var act = () => _handler.Handle(new CancelSaleItemCommand(sale.Id, Guid.NewGuid()), CancellationToken.None);
+        var act = () => _handler.Handle(new CancelSaleItemCommand(sale.Id, Guid.NewGuid()) { IsRequestingUserAdmin = true }, CancellationToken.None);
 
         await act.Should().ThrowAsync<KeyNotFoundException>();
     }
@@ -129,8 +132,37 @@ public class CancelSaleItemHandlerTests
         var saleId = Guid.NewGuid();
         _saleRepository.GetByIdWithItemsAsync(saleId, Arg.Any<CancellationToken>()).Returns((Sale?)null);
 
-        var act = () => _handler.Handle(new CancelSaleItemCommand(saleId, Guid.NewGuid()), CancellationToken.None);
+        var act = () => _handler.Handle(new CancelSaleItemCommand(saleId, Guid.NewGuid()) { IsRequestingUserAdmin = true }, CancellationToken.None);
 
         await act.Should().ThrowAsync<KeyNotFoundException>();
+    }
+
+    [Fact(DisplayName = "Given the Manager assigned to the sale's branch When cancelling an item Then succeeds")]
+    public async Task Handle_AssignedManager_CancelsItem()
+    {
+        var (sale, _, item2) = BuildSaleWithTwoActiveItems();
+        _saleRepository.GetByIdWithItemsAsync(sale.Id, Arg.Any<CancellationToken>()).Returns(sale);
+
+        var managerId = Guid.NewGuid();
+        _branchManagerRepository.IsManagerOfBranchAsync(managerId, sale.BranchId, Arg.Any<CancellationToken>()).Returns(true);
+
+        var result = await _handler.Handle(new CancelSaleItemCommand(sale.Id, item2.Id) { RequestingUserId = managerId }, CancellationToken.None);
+
+        result.Success.Should().BeTrue();
+        item2.Status.Should().Be(SaleItemStatus.Cancelled);
+    }
+
+    [Fact(DisplayName = "Given a Manager who is not assigned to the sale's branch When cancelling an item Then throws UnauthorizedAccessException")]
+    public async Task Handle_ManagerOfDifferentBranch_ThrowsUnauthorizedAccessException()
+    {
+        var (sale, _, item2) = BuildSaleWithTwoActiveItems();
+        _saleRepository.GetByIdWithItemsAsync(sale.Id, Arg.Any<CancellationToken>()).Returns(sale);
+
+        var managerId = Guid.NewGuid();
+        _branchManagerRepository.IsManagerOfBranchAsync(managerId, sale.BranchId, Arg.Any<CancellationToken>()).Returns(false);
+
+        var act = () => _handler.Handle(new CancelSaleItemCommand(sale.Id, item2.Id) { RequestingUserId = managerId }, CancellationToken.None);
+
+        await act.Should().ThrowAsync<UnauthorizedAccessException>();
     }
 }

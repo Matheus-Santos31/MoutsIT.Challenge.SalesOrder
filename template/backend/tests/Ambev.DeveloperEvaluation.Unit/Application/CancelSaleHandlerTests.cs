@@ -18,16 +18,18 @@ public class CancelSaleHandlerTests
 {
     private readonly ISaleRepository _saleRepository;
     private readonly ISaleItemRepository _saleItemRepository;
+    private readonly IBranchManagerRepository _branchManagerRepository;
     private readonly CancelSaleHandler _handler;
 
     public CancelSaleHandlerTests()
     {
         _saleRepository = Substitute.For<ISaleRepository>();
         _saleItemRepository = Substitute.For<ISaleItemRepository>();
-        _handler = new CancelSaleHandler(_saleRepository, _saleItemRepository);
+        _branchManagerRepository = Substitute.For<IBranchManagerRepository>();
+        _handler = new CancelSaleHandler(_saleRepository, _saleItemRepository, _branchManagerRepository);
     }
 
-    private static Sale BuildSaleWithTwoActiveItems(Guid userId)
+    private static Sale BuildSaleWithTwoActiveItems(Guid userId, Guid branchId = default)
     {
         var item1 = new SaleItem { Id = Guid.NewGuid(), Quantity = 2, UnitPrice = 10m, Discount = 0m, TotalAmount = 20m, Status = SaleItemStatus.Active };
         var item2 = new SaleItem { Id = Guid.NewGuid(), Quantity = 1, UnitPrice = 5m, Discount = 0m, TotalAmount = 5m, Status = SaleItemStatus.Active };
@@ -36,6 +38,7 @@ public class CancelSaleHandlerTests
         {
             Id = Guid.NewGuid(),
             UserId = userId,
+            BranchId = branchId == default ? Guid.NewGuid() : branchId,
             Status = SaleStatus.Created,
             Items = [item1, item2],
             ProductsQuantity = 2,
@@ -80,18 +83,37 @@ public class CancelSaleHandlerTests
         sale.Status.Should().Be(SaleStatus.Cancelled);
     }
 
-    [Fact(DisplayName = "Given a Manager who does not own the sale When cancelling Then succeeds")]
-    public async Task Handle_Manager_CancelsAnyonesSale()
+    [Fact(DisplayName = "Given the Manager assigned to the sale's branch When cancelling Then succeeds")]
+    public async Task Handle_AssignedManager_CancelsAnyonesSale()
     {
         var sale = BuildSaleWithTwoActiveItems(Guid.NewGuid());
         _saleRepository.GetByIdWithItemsAsync(sale.Id, Arg.Any<CancellationToken>()).Returns(sale);
 
-        var command = new CancelSaleCommand { Id = sale.Id, RequestingUserId = Guid.NewGuid(), IsRequestingUserManager = true };
+        var managerId = Guid.NewGuid();
+        _branchManagerRepository.IsManagerOfBranchAsync(managerId, sale.BranchId, Arg.Any<CancellationToken>()).Returns(true);
+
+        var command = new CancelSaleCommand { Id = sale.Id, RequestingUserId = managerId };
 
         var result = await _handler.Handle(command, CancellationToken.None);
 
         result.Success.Should().BeTrue();
         sale.Status.Should().Be(SaleStatus.Cancelled);
+    }
+
+    [Fact(DisplayName = "Given a Manager who is not assigned to the sale's branch When cancelling Then throws UnauthorizedAccessException")]
+    public async Task Handle_ManagerOfDifferentBranch_ThrowsUnauthorizedAccessException()
+    {
+        var sale = BuildSaleWithTwoActiveItems(Guid.NewGuid());
+        _saleRepository.GetByIdWithItemsAsync(sale.Id, Arg.Any<CancellationToken>()).Returns(sale);
+
+        var managerId = Guid.NewGuid();
+        _branchManagerRepository.IsManagerOfBranchAsync(managerId, sale.BranchId, Arg.Any<CancellationToken>()).Returns(false);
+
+        var command = new CancelSaleCommand { Id = sale.Id, RequestingUserId = managerId };
+
+        var act = () => _handler.Handle(command, CancellationToken.None);
+
+        await act.Should().ThrowAsync<UnauthorizedAccessException>();
     }
 
     [Fact(DisplayName = "Given a user who is neither owner, Manager nor Admin When cancelling Then throws UnauthorizedAccessException")]

@@ -95,8 +95,7 @@ public class SalesController : BaseController
         {
             Id = id,
             RequestingUserId = GetCurrentUserId(),
-            IsRequestingUserAdmin = User.IsInRole("Admin"),
-            IsRequestingUserManager = User.IsInRole("Manager")
+            IsRequestingUserAdmin = User.IsInRole("Admin")
         };
 
         await _mediator.Send(command, cancellationToken);
@@ -115,7 +114,13 @@ public class SalesController : BaseController
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CancelSaleItem([FromRoute] Guid saleId, [FromRoute] Guid itemId, CancellationToken cancellationToken)
     {
-        var response = await _mediator.Send(new CancelSaleItemCommand(saleId, itemId), cancellationToken);
+        var command = new CancelSaleItemCommand(saleId, itemId)
+        {
+            RequestingUserId = GetCurrentUserId(),
+            IsRequestingUserAdmin = User.IsInRole("Admin")
+        };
+
+        var response = await _mediator.Send(command, cancellationToken);
 
         return Ok(new ApiResponse
         {

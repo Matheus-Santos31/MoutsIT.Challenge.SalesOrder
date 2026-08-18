@@ -8,17 +8,22 @@ using MediatR;
 namespace Ambev.DeveloperEvaluation.Application.Sales.CancelSale;
 
 /// <summary>
-/// Cancels an entire sale: owner, Manager or Admin.
+/// Cancels an entire sale
 /// </summary>
 public class CancelSaleHandler : IRequestHandler<CancelSaleCommand, CancelSaleResponse>
 {
     private readonly ISaleRepository _saleRepository;
     private readonly ISaleItemRepository _saleItemRepository;
+    private readonly IBranchManagerRepository _branchManagerRepository;
 
-    public CancelSaleHandler(ISaleRepository saleRepository, ISaleItemRepository saleItemRepository)
+    public CancelSaleHandler(
+        ISaleRepository saleRepository,
+        ISaleItemRepository saleItemRepository,
+        IBranchManagerRepository branchManagerRepository)
     {
         _saleRepository = saleRepository;
         _saleItemRepository = saleItemRepository;
+        _branchManagerRepository = branchManagerRepository;
     }
 
     public async Task<CancelSaleResponse> Handle(CancelSaleCommand request, CancellationToken cancellationToken)
@@ -33,7 +38,10 @@ public class CancelSaleHandler : IRequestHandler<CancelSaleCommand, CancelSaleRe
             throw new KeyNotFoundException($"Sale with ID {request.Id} not found");
 
         var isOwner = request.RequestingUserId == sale.UserId;
-        if (!isOwner && !request.IsRequestingUserAdmin && !request.IsRequestingUserManager)
+        var isAssignedManager = !isOwner && !request.IsRequestingUserAdmin
+            && await _branchManagerRepository.IsManagerOfBranchAsync(request.RequestingUserId, sale.BranchId, cancellationToken);
+
+        if (!isOwner && !request.IsRequestingUserAdmin && !isAssignedManager)
             throw new UnauthorizedAccessException("You can only cancel your own sales.");
 
         if (sale.Status == SaleStatus.Cancelled)

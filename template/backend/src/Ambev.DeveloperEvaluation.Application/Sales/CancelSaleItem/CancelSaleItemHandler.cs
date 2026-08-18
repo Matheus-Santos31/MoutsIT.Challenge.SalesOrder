@@ -8,17 +8,22 @@ using MediatR;
 namespace Ambev.DeveloperEvaluation.Application.Sales.CancelSaleItem;
 
 /// <summary>
-/// Cancels a single line item of a sale — an operational/fulfillment action restricted to Manager/Admin.
+/// Cancels a single line item of a sale
 /// </summary>
 public class CancelSaleItemHandler : IRequestHandler<CancelSaleItemCommand, CancelSaleItemResponse>
 {
     private readonly ISaleRepository _saleRepository;
     private readonly ISaleItemRepository _saleItemRepository;
+    private readonly IBranchManagerRepository _branchManagerRepository;
 
-    public CancelSaleItemHandler(ISaleRepository saleRepository, ISaleItemRepository saleItemRepository)
+    public CancelSaleItemHandler(
+        ISaleRepository saleRepository,
+        ISaleItemRepository saleItemRepository,
+        IBranchManagerRepository branchManagerRepository)
     {
         _saleRepository = saleRepository;
         _saleItemRepository = saleItemRepository;
+        _branchManagerRepository = branchManagerRepository;
     }
 
     public async Task<CancelSaleItemResponse> Handle(CancelSaleItemCommand request, CancellationToken cancellationToken)
@@ -31,6 +36,10 @@ public class CancelSaleItemHandler : IRequestHandler<CancelSaleItemCommand, Canc
         var sale = await _saleRepository.GetByIdWithItemsAsync(request.SaleId, cancellationToken);
         if (sale is null)
             throw new KeyNotFoundException($"Sale with ID {request.SaleId} not found");
+
+        if (!request.IsRequestingUserAdmin
+            && !await _branchManagerRepository.IsManagerOfBranchAsync(request.RequestingUserId, sale.BranchId, cancellationToken))
+            throw new UnauthorizedAccessException("You can only manage sales from your assigned branch.");
 
         if (sale.Status == SaleStatus.Cancelled)
             throw new DomainException("This sale is already cancelled.");
